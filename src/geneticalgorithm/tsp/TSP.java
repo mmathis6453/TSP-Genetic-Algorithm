@@ -281,7 +281,14 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		}
 
 	}
-	
+	/**
+	 * This method runs the logic to evolve a list of nodes into the shortest cost path
+	 * 
+	 * @param population_size - the fixed size of the population
+	 * @param keep_top - How many of the top performing paths are crossed
+	 *                   and mutated to fill the population of the next generation
+	 * @param mutation_chance - The chance for mutation
+	 */
 	private void runTSP(int population_size, int keep_top, double mutation_chance){
 		baseImage = deepCopy(paintImage);
 		Population pop = new Population(population_size, pointList);
