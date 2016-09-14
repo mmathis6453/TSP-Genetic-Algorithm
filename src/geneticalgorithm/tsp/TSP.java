@@ -48,7 +48,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	
 	private volatile Path bestPath;
 	private volatile double pathCost; 
-	private volatile double startCost = Double.MAX_VALUE; 
+	private volatile double startCost;
 	private volatile boolean runFlag;
 	
 	private long startTime;
@@ -99,6 +99,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	public TSP(){
 		resetLevel = 1;
 		pathCost = Double.MAX_VALUE;
+		setStartCost(Double.MAX_VALUE);
 		latch = new CountDownLatch(0);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
@@ -202,7 +203,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 			setBestPath(newPath);
 			setPathCost(newPath.getCost());
 			DecimalFormat decimalFormat = new DecimalFormat("#.####");
-			decimalFormat.setMinimumFractionDigits(5);
+			decimalFormat.setMinimumFractionDigits(4);
 			setTitle( "Cost: "+decimalFormat.format((pathCost))+" px \t| Rate: "+decimalFormat.format((pxPerSec))+" px/s | Time: "+ Long.toString(duration)+" ms");
 			return true;
 		}
@@ -211,17 +212,19 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	
 	@Override
 	public void mousePressed(MouseEvent e) {
-		final int x = e.getX();
-		final int y = e.getY();
-	    Coordinate c = new Coordinate(x,y);
-	    addPoint(c);
-        paintPanel.repaint();
+		if (!getRunFlag()){
+			final int x = e.getX();
+			final int y = e.getY();
+		    Coordinate c = new Coordinate(x,y);
+		    addPoint(c);
+	        paintPanel.repaint();
+		}
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		
-		if (e.getActionCommand().equals("Run") && validateTextFields() && pointList.size() != 0){
+		if (e.getActionCommand().equals("Run") && validateTextFields() && pointList.size() > 1){
 			resetLevel = 2;
 	    	popSize.setEditable(false);
 	    	keepTop.setEditable(false);
@@ -341,6 +344,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
     	keepTop.setEditable(true);
     	mutRate.setEditable(true);
     	pop.setEditable(true);
+    	setStartCost(Double.MAX_VALUE);
 	}
 	
     private BufferedImage deepCopy(BufferedImage bi) {
