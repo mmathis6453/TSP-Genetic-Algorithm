@@ -63,6 +63,24 @@ public class Path {
 		return this.size;
 	}
 	
+	@Override
+	public boolean equals(Object o){
+		Path pathB =  (Path) o;
+		List<Coordinate> listB = pathB.getPath();
+		List<Coordinate> listA = this.getPath();
+		
+		Coordinate cA = listA.get(0);
+		int idxB = listB.indexOf(cA);
+		idxB++;
+		for(int idxA = 1; idxA < listA.size(); idxA++, idxB++){
+			if (idxB == listB.size()) idxB = 0;
+			if (!listB.get(idxB).equals(listA.get(idxA))){
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	/**
 	 *  There are two types of mutation. 
 	 *  1. A sequence of nodes are reversed

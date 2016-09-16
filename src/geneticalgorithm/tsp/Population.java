@@ -29,7 +29,7 @@ public class Population {
 		return this.population.get(0);
 	}
 	
-	public void newGeneration(int keep_top, double chance_mutate){
+	public void newGeneration(int keep_top, double chance_mutate, boolean allowTwins){
 		sortPopulation();
 		Random random = new Random();
 		int orig_size = population.size();
@@ -43,14 +43,22 @@ public class Population {
 				path.mutate();
 				j++;
 			}
-			new_population.add(path);
+			if (allowTwins){
+				new_population.add(path);
+			}
+			else if (!new_population.contains(path)){
+				new_population.add(path);
+			}
 		}
 
 		while(new_population.size() < orig_size){
 			int idx1 = random.nextInt(keep_top);
 			int idx2 = random.nextInt(keep_top);
 			Path new_path = Path.crossBreed(new Path(population.get(idx1)), new Path(population.get(idx2)));
-			if (!new_population.contains(new_path)){
+			if (allowTwins){
+				new_population.add(new_path);
+			}
+			else if (!new_population.contains(new_path)){
 				new_population.add(new_path);
 			}
 		}

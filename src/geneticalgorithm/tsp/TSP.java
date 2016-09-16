@@ -8,6 +8,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -20,6 +21,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridLayout;
 import java.awt.Shape;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -29,6 +31,7 @@ import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.WritableRaster;
+import java.math.BigInteger;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -59,6 +62,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	private JFormattedTextField keepTop;
 	private JFormattedTextField mutRate;
 	private JFormattedTextField pop;
+	private JCheckBox allowTwins; 
 	
 	private int resetLevel;
 	
@@ -92,7 +96,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		return this.pathCost;
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) {	
 		new TSP();
 	}
 	
@@ -172,7 +176,11 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	    pop.setMaximumSize(new Dimension(250,20));
 	    pop.setValue(1);
 	    commands.add(pop);
-
+	    
+	    commands.add(spacer);
+	    allowTwins = new JCheckBox("Allow Twins", true);
+	    commands.add(allowTwins);
+	    
 	    add(commands, BorderLayout.EAST);
 	    
 	    // Add action listener to buttons
@@ -230,6 +238,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	    	keepTop.setEditable(false);
 	    	mutRate.setEditable(false);
 	    	pop.setEditable(false);
+	    	allowTwins.setEnabled(false);
 	    	
 	    	String popSizeText = popSize.getText().replace(",", "");
 	    	String keepTopText = keepTop.getText().replace(",", "");
@@ -240,6 +249,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	    	final int keepTopInt = Integer.parseInt(keepTopText);
 	    	final double mutRate = Double.parseDouble(mutRateText);
 	    	final int popInt = Integer.parseInt(popText);
+	    	final boolean twins = allowTwins.isSelected();
 
 			setRunFlag(true);
 			latch = new CountDownLatch(popInt);
@@ -247,7 +257,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 			for (int i = 0; i < popInt; i++){
 				new Thread(new Runnable() {
 		            public void run() {
-		            	runTSP(popSizeInt, keepTopInt, mutRate);
+		            	runTSP(popSizeInt, keepTopInt, mutRate, twins);
 		            	latch.countDown();
 		            }
 		        }).start();
@@ -292,12 +302,12 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	 *                   and mutated to fill the population of the next generation
 	 * @param mutation_chance - The chance for mutation
 	 */
-	private void runTSP(int population_size, int keep_top, double mutation_chance){
+	private void runTSP(int population_size, int keep_top, double mutation_chance, boolean allowTwins){
 		baseImage = deepCopy(paintImage);
 		Population pop = new Population(population_size, pointList);
 		setStartCost(pop.getBest().getCost());
 		while (getRunFlag()){
-			pop.newGeneration(keep_top, mutation_chance);
+			pop.newGeneration(keep_top, mutation_chance, allowTwins);
 			Path top = pop.getBest();
 			boolean updated = updatePath(top);
 			if (updated) {
@@ -344,6 +354,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
     	keepTop.setEditable(true);
     	mutRate.setEditable(true);
     	pop.setEditable(true);
+    	allowTwins.setEnabled(true);
     	setStartCost(Double.MAX_VALUE);
 	}
 	
@@ -403,6 +414,34 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
     		JOptionPane.showMessageDialog(this, errorText);
     		return false;
     	}
+    	
+    	if (!allowTwins.isSelected()){
+    		BigInteger uniquePaths;
+    		BigInteger popSizeBigInt = BigInteger.valueOf(popSizeInt);
+    		if (popSizeInt == 2){
+    			uniquePaths = BigInteger.valueOf(1);
+    		}
+    		else{
+    			uniquePaths = factorial(BigInteger.valueOf(pointList.size()-1)).divide(BigInteger.valueOf(2));
+    		}
+    		if (popSizeBigInt.compareTo(uniquePaths) > 0) {
+    			JOptionPane.showMessageDialog(this, "Allow Twins is selected.\nThere population is too large to hold all unique paths.\n"+
+    					                             "There are only "+uniquePaths.toString()+" unique paths for "+Integer.toString(pointList.size())+" points");
+        		return false;
+    		}
+    	}
+    	int cores = Runtime.getRuntime().availableProcessors();
+    	if (popInt >= cores){
+
+    		JLabel message = new JLabel("Running with as many or more populations than you have available cores ("+Integer.toString(cores)+") may slow down your computer.");
+
+    		int reply = JOptionPane.showConfirmDialog(null,message , "WARNING",  JOptionPane.OK_CANCEL_OPTION);
+    		if (reply == JOptionPane.CANCEL_OPTION){
+    			return false;
+    		}
+    	}
+    	
+    	
     	return true;
     	
     }
@@ -423,7 +462,12 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	public void mouseExited(MouseEvent e) {
 	}
 
-
+	static BigInteger factorial(BigInteger n){    
+		if (n.equals(BigInteger.valueOf(0)))
+			return BigInteger.valueOf(1);    
+		else    
+			return(n.multiply(factorial(n.subtract(BigInteger.valueOf(1)))));    
+	}    
 	
 
 }
