@@ -11,5 +11,6 @@ You are also presented with the ability to change the evolution parameters befor
 * **Survivors:** This is the quantity of top performers you want to continue onto the next generation, and mutate/breed to fill up your population to the initial size.
 * **Mutation Rate:** This is the chance of your paths mutating to create new ones. The paths can mutate more than once.
 * **# Populations:** This is the number of independent populations evolving at the same time. If more than one independent population is evolving, the canvas will show the path of the best performing. Note that large numbers of independent populations can cause some performance issues.
+*  **Allow Twins:** If allow twins is turned off, each population will contain all unique paths. You will also need to make sure that you have enough nodes to fill a population with enough unique paths. Not allowing twins has significant overhead, but the benefit from it is that the algorithm is less likely to stall at a non-optimal solution. 
 
 Once your canvas is populated with nodes and variables are passed in, you can run the program and the canvas will update in real time with the lowest cost path. The title bar will be updated with the cost in pixels, the rate at which pixels are removed from the path, and time of last path update in ms. 
