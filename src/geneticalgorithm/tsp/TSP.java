@@ -9,9 +9,13 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
@@ -21,7 +25,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridLayout;
 import java.awt.Shape;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -31,6 +34,14 @@ import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -63,11 +74,28 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	private JFormattedTextField mutRate;
 	private JFormattedTextField pop;
 	private JCheckBox allowTwins; 
+	private JMenuBar menuBar;
 	
 	private int resetLevel;
 	
+	private volatile PrintWriter pw = null;
+	private File outputFile = null;
+	
 	public synchronized void setRunFlag(boolean flag){
 		this.runFlag = flag;
+	}
+	
+	public synchronized void write(String data){
+		if (pw == null) {
+			try {
+				pw = new PrintWriter(outputFile);
+				pw.println("Thread,Time (ms),Cost (px)");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		pw.println(data);
+		pw.flush();
 	}
 	
 	public synchronized boolean getRunFlag(){
@@ -101,6 +129,15 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	}
 	
 	public TSP(){
+		
+		try {
+			outputFile = new File("data.csv");
+			pw = new PrintWriter(outputFile);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} 
+		pw.println("Thread,Time (ms),Cost (px)");
+		
 		resetLevel = 1;
 		pathCost = Double.MAX_VALUE;
 		setStartCost(Double.MAX_VALUE);
@@ -150,7 +187,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	    commands.add(popSizeLabel);
 	    popSize = new JFormattedTextField(NumberFormat.getIntegerInstance());
 	    popSize.setMaximumSize(new Dimension(250,20));
-	    popSize.setValue(1000);
+	    popSize.setValue(10);
 	    commands.add(popSize);
 	    
 	    
@@ -158,7 +195,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	    commands.add(keepTopLabel);
 	    keepTop = new JFormattedTextField(NumberFormat.getIntegerInstance());
 	    keepTop.setMaximumSize(new Dimension(250,20));
-	    keepTop.setValue(100);
+	    keepTop.setValue(4);
 	    commands.add(keepTop);
 	    
 	    commands.add(spacer);
@@ -188,9 +225,103 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		resetButton.addActionListener(this);
 		randomPlacement.addActionListener(this);
 		
+		
+		menuBar = new JMenuBar();
+		JMenu fileMenu = new JMenu("File");
+
+		JMenuItem newMenuItem = new JMenuItem("Save");
+		newMenuItem.addActionListener(new ActionListener() {
+		      public void actionPerformed(ActionEvent e) {            
+		          JFileChooser fileChooser = new JFileChooser();
+		          int returnValue = fileChooser.showSaveDialog(null);
+		          if (returnValue == JFileChooser.APPROVE_OPTION) {
+		            File selectedFile = fileChooser.getSelectedFile();
+		            TSP.this.toFile(selectedFile);
+		          }
+		      }    
+		});
+		fileMenu.add(newMenuItem);
+		
+		
+		JMenuItem openMenuItem = new JMenuItem("Open");
+		openMenuItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fileChooser = new JFileChooser();
+		          int returnValue = fileChooser.showOpenDialog(null);
+		          if (returnValue == JFileChooser.APPROVE_OPTION) {
+		            File selectedFile = fileChooser.getSelectedFile();
+		            TSP.this.loadFile(selectedFile);
+		          }
+				
+			}
+		});
+		fileMenu.add(openMenuItem);
+		menuBar.add(fileMenu);
+		
+		JMenu outputMenu = new JMenu("Output");
+		JMenuItem outputStream = new JMenuItem("Change Output File");
+		outputStream.addActionListener(new ActionListener() {
+		      public void actionPerformed(ActionEvent e) {            
+		          JFileChooser fileChooser = new JFileChooser();
+		          int returnValue = fileChooser.showSaveDialog(null);
+		          if (returnValue == JFileChooser.APPROVE_OPTION) {
+		            File selectedFile = fileChooser.getSelectedFile();
+		            try {
+						TSP.this.outputFile = selectedFile;
+						TSP.this.pw = null;
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
+		          }
+		      }    
+		});
+		outputMenu.add(outputStream);
+		menuBar.add(outputMenu);
+		
+		
+		
+		this.setJMenuBar(menuBar);
+		
+		
+		
+		
+		
 		setResizable(false);
 		pack();
 		setVisible(true);
+	}
+	
+	public void toFile(File outFile){
+		try{
+			FileOutputStream fout = new FileOutputStream(outFile);
+			ObjectOutputStream oos = new ObjectOutputStream(fout);
+			oos.writeObject(pointList);
+			oos.close();
+		} catch (Exception e) {
+			System.err.println("Problem saving file");
+			e.printStackTrace();
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public void loadFile(File inFile){
+		try {
+			FileInputStream fis = new FileInputStream(inFile);
+			ObjectInputStream ois = new ObjectInputStream(fis);
+			
+			resetLevel = 1;
+			reset();
+			List<Coordinate> loadList = (List<Coordinate>) ois.readObject();
+			ois.close();
+			for (Coordinate c : loadList){
+				addPoint(c);
+			}
+			paintPanel.repaint();
+		} catch (Exception e) {
+			System.err.println("Problem loading file");
+			e.printStackTrace();
+		}
+		
 	}
 	
 	private void addPoint(Coordinate c){
@@ -207,12 +338,12 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		if (newPath.getCost() < getPathCost()){
 			long now = System.currentTimeMillis();
 			long duration = now - startTime;
-			double pxPerSec = (getStartCost() - newPath.getCost())/duration*1000;
 			setBestPath(newPath);
 			setPathCost(newPath.getCost());
 			DecimalFormat decimalFormat = new DecimalFormat("#.####");
 			decimalFormat.setMinimumFractionDigits(4);
-			setTitle( "Cost: "+decimalFormat.format((pathCost))+" px \t| Rate: "+decimalFormat.format((pxPerSec))+" px/s | Time: "+ Long.toString(duration)+" ms");
+			setTitle( "Cost: "+decimalFormat.format((pathCost))+" px");
+			write(Thread.currentThread().getId()+","+duration+","+newPath.getCost());
 			return true;
 		}
 		return false;
@@ -239,6 +370,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	    	mutRate.setEditable(false);
 	    	pop.setEditable(false);
 	    	allowTwins.setEnabled(false);
+	    	menuBar.setEnabled(false);
 	    	
 	    	String popSizeText = popSize.getText().replace(",", "");
 	    	String keepTopText = keepTop.getText().replace(",", "");
@@ -353,9 +485,16 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
     	popSize.setEditable(true);
     	keepTop.setEditable(true);
     	mutRate.setEditable(true);
+    	menuBar.setEnabled(true);
     	pop.setEditable(true);
     	allowTwins.setEnabled(true);
     	setStartCost(Double.MAX_VALUE);
+    	try{
+    		pw.close();
+    	} catch (Exception e) {
+    		//Do nothing
+    	}
+    	pw = null;
 	}
 	
     private BufferedImage deepCopy(BufferedImage bi) {
@@ -469,5 +608,21 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 			return(n.multiply(factorial(n.subtract(BigInteger.valueOf(1)))));    
 	}    
 	
+	
+   class MenuItemListener implements ActionListener {
+	      public void actionPerformed(ActionEvent e) {            
+	          JFileChooser fileChooser = new JFileChooser();
+	          int returnValue = fileChooser.showOpenDialog(null);
+	          if (returnValue == JFileChooser.APPROVE_OPTION) {
+	            File selectedFile = fileChooser.getSelectedFile();
+	            System.out.println(selectedFile.getName());
+	          }
+	      }    
+	   }
 
 }
+
+
+
+
+
