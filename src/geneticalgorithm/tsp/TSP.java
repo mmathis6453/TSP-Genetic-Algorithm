@@ -36,19 +36,17 @@ import java.awt.image.ColorModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 
 @SuppressWarnings("serial")
-public class TSP extends JFrame implements ActionListener, MouseListener{
+public class TSP extends JFrame{
 	
 	static int panelSizeX = 300;
 	static int panelSizeY = 300;
@@ -159,7 +157,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		};
 		paintPanel.setPreferredSize(new Dimension(panelSizeX,panelSizeY));
 		paintPanel.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 1));
-		paintPanel.addMouseListener(this);
+		paintPanel.addMouseListener(new MyMouseListener());
 		add(paintPanel);
 		
 		JPanel commands = new JPanel();
@@ -221,14 +219,16 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 	    add(commands, BorderLayout.EAST);
 	    
 	    // Add action listener to buttons
-		runButton.addActionListener(this);
-		resetButton.addActionListener(this);
-		randomPlacement.addActionListener(this);
+	    ButtonListener bl = new ButtonListener();
+		runButton.addActionListener(bl);
+		resetButton.addActionListener(bl);
+		randomPlacement.addActionListener(bl);
 		
-		
+		// Add menu bar
 		menuBar = new JMenuBar();
 		JMenu fileMenu = new JMenu("File");
 
+		// Add ability to save point map
 		JMenuItem newMenuItem = new JMenuItem("Save");
 		newMenuItem.addActionListener(new ActionListener() {
 		      public void actionPerformed(ActionEvent e) {            
@@ -242,7 +242,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		});
 		fileMenu.add(newMenuItem);
 		
-		
+		// Add ability to open point map
 		JMenuItem openMenuItem = new JMenuItem("Open");
 		openMenuItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -258,6 +258,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		fileMenu.add(openMenuItem);
 		menuBar.add(fileMenu);
 		
+		// Add ability to change the output file
 		JMenu outputMenu = new JMenu("Output");
 		JMenuItem outputStream = new JMenuItem("Change Output File");
 		outputStream.addActionListener(new ActionListener() {
@@ -278,13 +279,7 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		outputMenu.add(outputStream);
 		menuBar.add(outputMenu);
 		
-		
-		
 		this.setJMenuBar(menuBar);
-		
-		
-		
-		
 		
 		setResizable(false);
 		pack();
@@ -349,83 +344,9 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 		return false;
 	}
 	
-	@Override
-	public void mousePressed(MouseEvent e) {
-		if (!getRunFlag()){
-			final int x = e.getX();
-			final int y = e.getY();
-		    Coordinate c = new Coordinate(x,y);
-		    addPoint(c);
-	        paintPanel.repaint();
-		}
-	}
 
-	@Override
-	public void actionPerformed(ActionEvent e) {
-		
-		if (e.getActionCommand().equals("Run") && validateTextFields() && pointList.size() > 1){
-			resetLevel = 2;
-	    	popSize.setEditable(false);
-	    	keepTop.setEditable(false);
-	    	mutRate.setEditable(false);
-	    	pop.setEditable(false);
-	    	allowTwins.setEnabled(false);
-	    	menuBar.setEnabled(false);
-	    	
-	    	String popSizeText = popSize.getText().replace(",", "");
-	    	String keepTopText = keepTop.getText().replace(",", "");
-	    	String mutRateText = mutRate.getText().replace(",", "");
-	    	String popText = pop.getText().replace(",", "");
-	    	
-	    	final int popSizeInt = Integer.parseInt(popSizeText);
-	    	final int keepTopInt = Integer.parseInt(keepTopText);
-	    	final double mutRate = Double.parseDouble(mutRateText);
-	    	final int popInt = Integer.parseInt(popText);
-	    	final boolean twins = allowTwins.isSelected();
 
-			setRunFlag(true);
-			latch = new CountDownLatch(popInt);
-			startTime = System.currentTimeMillis();
-			for (int i = 0; i < popInt; i++){
-				new Thread(new Runnable() {
-		            public void run() {
-		            	runTSP(popSizeInt, keepTopInt, mutRate, twins);
-		            	latch.countDown();
-		            }
-		        }).start();
-			}
-			
-		}
-		else if (e.getActionCommand().equals("Reset")){
-			try{
-				setRunFlag(false);
-				latch.await();
-				reset();
-				repaint();
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
-		}
-		else if (e.getActionCommand().equals("Add 10 Points")){
-			try {
-				if (!getRunFlag()){
-					latch.await();
-					Random random = new Random();
-					int populateNum = 10;
-					for (int i = 0; i < populateNum; i++){
-						int x = random.nextInt(panelSizeX);
-						int y = random.nextInt(panelSizeY);
-						Coordinate c = new Coordinate(x,y);
-			    	    addPoint(c);
-					}
-					repaint();
-				}
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
-		}
 
-	}
 	/**
 	 * This method runs the logic to evolve a list of nodes into the shortest cost path
 	 * 
@@ -579,27 +500,8 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
     			return false;
     		}
     	}
-    	
-    	
     	return true;
-    	
     }
-
-	@Override
-	public void mouseClicked(MouseEvent e) {
-	}
-	
-	@Override
-	public void mouseReleased(MouseEvent e) {
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent e) {
-	}
-
-	@Override
-	public void mouseExited(MouseEvent e) {
-	}
 
 	static BigInteger factorial(BigInteger n){    
 		if (n.equals(BigInteger.valueOf(0)))
@@ -608,18 +510,105 @@ public class TSP extends JFrame implements ActionListener, MouseListener{
 			return(n.multiply(factorial(n.subtract(BigInteger.valueOf(1)))));    
 	}    
 	
-	
-   class MenuItemListener implements ActionListener {
-	      public void actionPerformed(ActionEvent e) {            
-	          JFileChooser fileChooser = new JFileChooser();
-	          int returnValue = fileChooser.showOpenDialog(null);
-	          if (returnValue == JFileChooser.APPROVE_OPTION) {
-	            File selectedFile = fileChooser.getSelectedFile();
-	            System.out.println(selectedFile.getName());
-	          }
-	      }    
-	   }
+	class MenuItemListener implements ActionListener {
+		public void actionPerformed(ActionEvent e) {            
+			JFileChooser fileChooser = new JFileChooser();
+			int returnValue = fileChooser.showOpenDialog(null);
+			if (returnValue == JFileChooser.APPROVE_OPTION) {
+				File selectedFile = fileChooser.getSelectedFile();
+				System.out.println(selectedFile.getName());
+			}
+		}    
+	}
 
+	class ButtonListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			if (e.getActionCommand().equals("Run") && validateTextFields() && pointList.size() > 1){
+				resetLevel = 2;
+		    	popSize.setEditable(false);
+		    	keepTop.setEditable(false);
+		    	mutRate.setEditable(false);
+		    	pop.setEditable(false);
+		    	allowTwins.setEnabled(false);
+		    	menuBar.setEnabled(false);
+		    	
+		    	String popSizeText = popSize.getText().replace(",", "");
+		    	String keepTopText = keepTop.getText().replace(",", "");
+		    	String mutRateText = mutRate.getText().replace(",", "");
+		    	String popText = pop.getText().replace(",", "");
+		    	
+		    	final int popSizeInt = Integer.parseInt(popSizeText);
+		    	final int keepTopInt = Integer.parseInt(keepTopText);
+		    	final double mutRate = Double.parseDouble(mutRateText);
+		    	final int popInt = Integer.parseInt(popText);
+		    	final boolean twins = allowTwins.isSelected();
+
+				setRunFlag(true);
+				latch = new CountDownLatch(popInt);
+				startTime = System.currentTimeMillis();
+				for (int i = 0; i < popInt; i++){
+					new Thread(new Runnable() {
+			            public void run() {
+			            	runTSP(popSizeInt, keepTopInt, mutRate, twins);
+			            	latch.countDown();
+			            }
+			        }).start();
+				}
+				
+			}
+			else if (e.getActionCommand().equals("Reset")){
+				try{
+					setRunFlag(false);
+					latch.await();
+					reset();
+					repaint();
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+			else if (e.getActionCommand().equals("Add 10 Points")){
+				try {
+					if (!getRunFlag()){
+						latch.await();
+						Random random = new Random();
+						int populateNum = 10;
+						for (int i = 0; i < populateNum; i++){
+							int x = random.nextInt(panelSizeX);
+							int y = random.nextInt(panelSizeY);
+							Coordinate c = new Coordinate(x,y);
+				    	    addPoint(c);
+						}
+						repaint();
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+		}
+	}
+
+	class MyMouseListener implements MouseListener {
+
+		public void mouseClicked(MouseEvent e) {}
+
+		public void mouseReleased(MouseEvent e) {}
+
+		public void mouseEntered(MouseEvent e) {}
+		
+		public void mouseExited(MouseEvent e) {}
+		
+		public void mousePressed(MouseEvent e) {
+			if (!getRunFlag()){
+				final int x = e.getX();
+				final int y = e.getY();
+			    Coordinate c = new Coordinate(x,y);
+			    addPoint(c);
+		        paintPanel.repaint();
+			}
+		}
+	}
 }
 
 
