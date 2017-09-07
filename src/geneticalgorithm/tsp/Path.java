@@ -96,9 +96,19 @@ public class Path
   }
 
   /**
-   * There are two types of mutation. 1. A sequence of nodes are reversed 2. A sequence of nodes are moved somewhere
-   * else in the path There is a 25% chance of either one of these types of mutation happening, and a 50% chance of both
-   * of them happening Flip example: ab|cdefg|hij -> abgfedchij Move example: ab|cdefg|hi j -> abhicdefgj ^
+   *  There are two types of mutation. 
+   *  1. A sequence of nodes are reversed
+   *  2. A sequence of nodes are moved somewhere else in the path
+   *  
+   *  There is a 25% chance of either one of these types of mutation happening, 
+   *  and a 50% chance of both of them happening
+   *  
+   *  Flip example:
+   *               ab|cdefg|hij -> abgfedchij
+   *  
+   *  Move example:
+   *               ab|cdefg|hi j -> abhicdefgj
+   *                          ^
    */
   public void mutate()
   {
@@ -161,11 +171,18 @@ public class Path
   }
 
   /**
-   * This method takes in two paths as arguments, and returns a newly formed path that has parts of both. This works by
-   * randomly selecting a sequence from path1, removing the intersection of nodes from path 2, and combining the final
-   * result back together. Ex: abcdefghij x jigbacfhde Suppose we want to cross these two paths, and select "bcdef" as
-   * the sequence a|bcdef|ghij x jigbacfhde = bcdefjigah ^^^^^ ^^^ ^ ^ We cut out bcdef from path1, remove those nodes
-   * from path2, and concatenate the paths together
+   * This method takes in two paths as arguments, and returns a newly formed path that has parts of both. 
+   * This works by randomly selecting a sequence from path1, removing the intersection of nodes from 
+   * path 2, and combining the final result back together.
+   * 
+   * Ex: abcdefghij x jigbacfhde
+   * 
+   * Suppose we want to cross these two paths, and select "bcdef" as the sequence
+   * 
+   *     a|bcdef|ghij x jigbacfhde = bcdefjigah
+   *       ^^^^^        ^^^ ^  ^     
+   * We cut out bcdef from path1, remove those nodes from path2, and concatenate the paths together 
+   * 
    */
   public static Path crossBreed(Path path1, Path path2)
   {
